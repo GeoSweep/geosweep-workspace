@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1200 36" width="1200" height="36" role="presentation">
+  <path id="r" d="M0 18 L1200 18" stroke="#BFCCD6" stroke-width="3" stroke-dasharray="12 10" fill="none"/>
+  <g>
+    <animateMotion dur="7s" repeatCount="indefinite"><mpath xlink:href="#r" href="#r"/></animateMotion>
+    <circle r="7" fill="#0F766E"/>
+    <circle r="7" fill="none" stroke="#F59E0B" stroke-width="2"><animate attributeName="r" values="7;17" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" values=".9;0" dur="1.5s" repeatCount="indefinite"/></circle>
+  </g>
+</svg>

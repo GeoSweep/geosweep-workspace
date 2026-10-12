@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1200 560" width="1200" height="560" role="img" aria-labelledby="t d">
+  <title id="t">GeoSweep architecture</title>
+  <desc id="d">Data flows from the truck's ESP32 node through HiveMQ to the Node.js backend, which checks Supabase PostGIS, sends push alerts through Firebase, streams live positions to the mobile app and serves the React dashboard.</desc>
+  <defs>
+    <path id="p1" d="M240 290 L300 290"/>
+    <path id="p2" d="M500 290 L550 290"/>
+    <path id="p3" d="M770 290 L900 290"/>
+    <path id="p4" d="M660 335 L660 420"/>
+    <path id="p5" d="M660 245 L660 142"/>
+    <path id="p6" d="M770 100 C 900 100, 1000 150, 1000 245"/>
+    <path id="p7" d="M740 335 C 800 420, 840 470, 900 470"/>
+    <style>
+      .sans{font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif}
+      .flow{fill:none;stroke:#9FB3C8;stroke-width:2.5;stroke-dasharray:7 7}
+      .lbl{font-size:13px;font-weight:600;fill:#486581}
+      .h{font-size:19px;font-weight:700;fill:#0F2A43}
+      .s{font-size:13.5px;fill:#486581}
+    </style>
+  </defs>
+  <rect width="1200" height="560" rx="22" fill="#F4F8FB"/>
+
+  <g class="flow">
+    <use xlink:href="#p1" href="#p1"><animate attributeName="stroke-dashoffset" from="14" to="0" dur=".8s" repeatCount="indefinite"/></use>
+    <use xlink:href="#p2" href="#p2"><animate attributeName="stroke-dashoffset" from="14" to="0" dur=".8s" repeatCount="indefinite"/></use>
+    <use xlink:href="#p3" href="#p3"><animate attributeName="stroke-dashoffset" from="14" to="0" dur=".8s" repeatCount="indefinite"/></use>
+    <use xlink:href="#p4" href="#p4"><animate attributeName="stroke-dashoffset" from="14" to="0" dur=".8s" repeatCount="indefinite"/></use>
+    <use xlink:href="#p5" href="#p5"><animate attributeName="stroke-dashoffset" from="14" to="0" dur=".8s" repeatCount="indefinite"/></use>
+    <use xlink:href="#p6" href="#p6"><animate attributeName="stroke-dashoffset" from="14" to="0" dur=".8s" repeatCount="indefinite"/></use>
+    <use xlink:href="#p7" href="#p7"><animate attributeName="stroke-dashoffset" from="14" to="0" dur=".8s" repeatCount="indefinite"/></use>
+  </g>
+
+  <!-- travelling data packets -->
+  <g fill="#0F766E">
+    <circle r="5"><animateMotion dur="1.6s" repeatCount="indefinite"><mpath xlink:href="#p1" href="#p1"/></animateMotion></circle>
+    <circle r="5"><animateMotion dur="1.2s" begin=".5s" repeatCount="indefinite"><mpath xlink:href="#p2" href="#p2"/></animateMotion></circle>
+    <circle r="5" fill="#2563EB"><animateMotion dur="2s" begin=".2s" repeatCount="indefinite"><mpath xlink:href="#p3" href="#p3"/></animateMotion></circle>
+    <circle r="5" fill="#7C3AED"><animateMotion dur="1.8s" begin=".6s" repeatCount="indefinite"><mpath xlink:href="#p4" href="#p4"/></animateMotion></circle>
+    <circle r="5" fill="#F59E0B"><animateMotion dur="1.8s" begin="1s" repeatCount="indefinite"><mpath xlink:href="#p5" href="#p5"/></animateMotion></circle>
+    <circle r="5" fill="#F59E0B"><animateMotion dur="2.4s" begin="1.2s" repeatCount="indefinite"><mpath xlink:href="#p6" href="#p6"/></animateMotion></circle>
+    <circle r="5" fill="#2563EB"><animateMotion dur="2.2s" begin=".3s" repeatCount="indefinite"><mpath xlink:href="#p7" href="#p7"/></animateMotion></circle>
+  </g>
+
+  <!-- edge labels -->
+  <g class="sans lbl">
+    <text x="270" y="278" text-anchor="middle">MQTT</text>
+    <text x="525" y="231" text-anchor="middle">subscribe</text>
+    <text x="835" y="278" text-anchor="middle">Socket.io</text>
+    <text x="672" y="388">ST_DWithin</text>
+    <text x="672" y="200">500 m breach</text>
+    <text x="900" y="84" text-anchor="middle">push alert</text>
+    <text x="838" y="428">REST</text>
+  </g>
+
+  <!-- nodes -->
+  <g class="sans">
+    <rect x="40" y="245" width="200" height="90" rx="14" fill="#FFFFFF" stroke="#0F766E" stroke-width="2"/>
+    <text x="140" y="283" text-anchor="middle" class="h">Truck node</text>
+    <text x="140" y="306" text-anchor="middle" class="s">ESP32 + NEO-6M + SIM800L</text>
+
+    <rect x="300" y="245" width="200" height="90" rx="14" fill="#FFFFFF" stroke="#0F766E" stroke-width="2"/>
+    <text x="400" y="283" text-anchor="middle" class="h">HiveMQ Cloud</text>
+    <text x="400" y="306" text-anchor="middle" class="s">MQTT broker, TLS</text>
+
+    <rect x="550" y="245" width="220" height="90" rx="14" fill="#0F2A43"/>
+    <text x="660" y="283" text-anchor="middle" font-size="19" font-weight="700" fill="#FFFFFF">Node.js backend</text>
+    <text x="660" y="306" text-anchor="middle" font-size="13.5" fill="#BCCCDC">Express + Socket.io on Render</text>
+
+    <rect x="550" y="420" width="220" height="90" rx="14" fill="#FFFFFF" stroke="#7C3AED" stroke-width="2"/>
+    <text x="660" y="458" text-anchor="middle" class="h">Supabase</text>
+    <text x="660" y="481" text-anchor="middle" class="s">PostgreSQL + PostGIS + Auth</text>
+
+    <rect x="550" y="50" width="220" height="92" rx="14" fill="#FFFFFF" stroke="#F59E0B" stroke-width="2"/>
+    <text x="660" y="89" text-anchor="middle" class="h">Firebase FCM</text>
+    <text x="660" y="112" text-anchor="middle" class="s">Push notifications</text>
+
+    <rect x="900" y="245" width="200" height="90" rx="14" fill="#FFFFFF" stroke="#2563EB" stroke-width="2"/>
+    <text x="1000" y="283" text-anchor="middle" class="h">Mobile app</text>
+    <text x="1000" y="306" text-anchor="middle" class="s">React Native (Expo)</text>
+
+    <rect x="900" y="425" width="200" height="90" rx="14" fill="#FFFFFF" stroke="#2563EB" stroke-width="2"/>
+    <text x="1000" y="463" text-anchor="middle" class="h">Admin dashboard</text>
+    <text x="1000" y="486" text-anchor="middle" class="s">React + Leaflet on Vercel</text>
+  </g>
+</svg>
