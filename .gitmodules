@@ -1,0 +1,12 @@
+[submodule "geosweep-backend"]
+	path = geosweep-backend
+	url = https://github.com/GeoSweep/geosweep-backend.git
+[submodule "geosweep-web"]
+	path = geosweep-web
+	url = https://github.com/GeoSweep/geosweep-web.git
+[submodule "geosweep-mobile"]
+	path = geosweep-mobile
+	url = https://github.com/GeoSweep/geosweep-mobile.git
+[submodule "geosweep-firmware"]
+	path = geosweep-firmware
+	url = https://github.com/GeoSweep/geosweep-firmware.git

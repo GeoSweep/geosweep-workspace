@@ -4,6 +4,580 @@ This document is the implementation source of truth for developers and AI coding
 
 The committed stack is **Node.js + Express + TypeScript + Supabase PostgreSQL/PostGIS + React/Vite/TypeScript**. Do not mix in the earlier Java/Spring Boot architecture. Hardware is delayed by design; build and test the platform using simulated telemetry first.
 
+> **📖 Agent rules, architecture contract, and coding guidelines are in [Appendix A–E](#a-universal-rules-for-antigravity-and-all-coding-agents) at the bottom of this document.**
+
+---
+
+# [x] PHASE 00 — Polyrepo and developer foundation
+
+## Goal
+
+Establish the clean 4-repository polyrepo architecture and verify that each repository's local development loop functions independently.
+
+## Tasks
+
+- [x] Initialize and configure the 4 repositories: `geosweep-backend`, `geosweep-web`, `geosweep-mobile`, and `geosweep-firmware`.
+- [x] Maintain `README.md`, `PHASES.md`, `.gitignore`, and `.env.example` across all 4 repositories.
+- [x] Configure TypeScript strict mode and consistent code style across TypeScript projects.
+- [x] Add a backend health endpoint: `GET /api/health` in `geosweep-backend`.
+- [x] Add a frontend diagnostic shell in `geosweep-web` that connects to the backend health endpoint and displays loading/error/latency states.
+- [x] Document local setup commands for navigating and running each repository independently (`cd geosweep-backend`, `cd geosweep-web`, etc.).
+- [x] Create `docs/decisions/` for architecture decision records.
+
+## Acceptance criteria
+
+- [x] Backend (`geosweep-backend`) starts locally and health endpoint returns documented response.
+- [x] Web frontend (`geosweep-web`) starts, connects to backend, and builds with Vite.
+- [x] TypeScript strict mode checks pass in both `geosweep-backend` and `geosweep-web`.
+- [x] Health endpoint returns a documented response.
+- [x] No real secrets are tracked by Git in any repository.
+- [x] A new developer can enter any repository folder and run it without guessing.
+
+Do not implement business modules or MQTT in this phase.
+
+---
+
+# [x] PHASE 01 — Supabase database and schema foundation
+
+## Goal
+
+Set up PostgreSQL/PostGIS, migrations, minimal seed data, and a documented relational model.
+
+## Tasks
+
+- [x] Create/connect a Supabase project or document local development configuration.
+- [x] Enable PostGIS through a migration or documented database setup step.
+- [x] Establish consistent primary-key, timestamp, naming, and foreign-key conventions.
+- [x] Create only the initial tables required for authentication/profile and municipal hierarchy.
+- [x] Proposed initial domains: profiles, cities, zones, wards, societies, roles/permissions or role assignments, and user scopes. Finalize table shape based on the auth and RBAC design before creating migrations.
+- [x] Add appropriate unique constraints and indexes.
+- [x] Add development seed data without real personal information.
+- [x] Document how migrations are applied and how a clean database is initialized.
+
+## Rules
+
+- Do not use an ORM or schema generator as a substitute for reviewed migrations.
+- Never edit an already-applied migration to change deployed schema; add a new migration.
+- Do not store secrets in `seed.sql`.
+- Avoid creating telemetry tables before the telemetry model and retention policy are defined.
+
+## Acceptance criteria
+
+- [x] A clean database can be initialized from migrations.
+- [x] Foreign keys and uniqueness rules work.
+- [x] PostGIS is enabled.
+- [x] The schema is documented.
+- [x] Seed data is deterministic and clearly development-only.
+
+---
+
+# [o] PHASE 02 — Authentication, profiles, RBAC, and geographic scope
+
+## Goal
+
+Implement phone OTP login and enforce authorization on the backend.
+
+## Auth contract
+
+- Use Supabase Auth phone OTP if the chosen project configuration supports it.
+- Verify tokens server-side using a supported verification mechanism.
+- Resolve the GeoSweep profile, active status, role, permissions, and scope from trusted records.
+- Users cannot choose their role at login.
+- If OTP provider credentials or phone delivery are not configured, document the blocker and use a clearly labelled development-only mock flow; never claim real SMS works.
+
+## Roles
+
+- `PLATFORM_SUPER_ADMIN`
+- `CITY_ADMIN`
+- `ZONAL_OFFICER`
+- `SANITARY_INSPECTOR`
+- `SOCIETY_SECRETARY`
+- `DRIVER`
+- `CITIZEN`
+
+## Tasks
+
+- [x] Implement authentication middleware.
+- [x] Implement a centralized permission/scope authorization helper.
+- [x] Implement `GET /api/me` or the equivalent current-profile endpoint.
+- [x] Protect API routes by permission and record scope.
+- [x] Define how roles and scopes are assigned and audited.
+- [o] Add negative tests for invalid/expired token, inactive user, missing permission, and out-of-scope access.
+- [x] Decide and document token/session handling; do not invent a custom token format.
+
+## Acceptance criteria
+
+- [x] Invalid or expired credentials are rejected.
+- [x] User role is never accepted from a login form as authoritative.
+- [x] Backend resolves roles and scopes from trusted data.
+- [o] Out-of-scope API requests are rejected even when manually constructed.
+- [x] Service-role and other server secrets are never exposed to clients.
+
+---
+
+# [o] PHASE 03 — Super Admin and municipal onboarding
+
+## Goal
+
+Deliver the first complete administrative slice.
+
+## Screens
+
+- [x] Login/OTP
+- [x] Dashboard shell
+- [x] Cities
+- [x] Users
+- [x] Roles/assignments as required by the approved data model
+
+## APIs
+
+Design endpoint names after inspecting existing routes. Expected capabilities include:
+
+- [x] list/create city
+- [x] list/create/update/deactivate user/profile
+- [x] assign role and geographic scope
+- [x] retrieve current user's profile and permitted navigation data
+
+Do not create duplicate endpoints if equivalent routes already exist.
+
+## First end-to-end flow
+
+```text
+Platform Super Admin signs in
+  ↓
+Creates a city / ULB
+  ↓
+Creates a City Admin profile
+  ↓
+Assigns the City Admin to that city
+  ↓
+City Admin signs in
+  ↓
+City Admin can access only that city's data
+```
+
+## Acceptance criteria
+
+- [x] Data comes from the database, not permanent frontend mock arrays.
+- [x] Form loading, validation, success, empty, and error states work.
+- [o] A City Admin cannot access another city by changing a URL or API identifier.
+- [x] Sensitive user/role/scope changes are audit logged where the audit module is available.
+
+---
+
+# [o] PHASE 04 — Zones, wards, societies, and scope enforcement
+
+## Goal
+
+Build the municipal hierarchy and constrain data access at each level.
+
+## Tasks
+
+- [o] CRUD for zones, wards, and societies as authorized by role.
+- [x] Validate parent-child relationships (a ward belongs to a valid zone/city according to the approved schema).
+- [o] Implement scope-filtered queries in backend services.
+- [ ] Add tests for cross-city, cross-zone, cross-ward, and cross-society access.
+- [o] Add admin UI for the permitted operations only.
+
+## Acceptance criteria
+
+- [x] Parent-child relationships are validated by the backend and database.
+- [o] A user cannot reassign a record outside their authority.
+- [o] Scope is not enforced only by frontend filtering.
+
+---
+
+# [o] PHASE 05 — Fleet and device registry
+
+## Goal
+
+Manage trucks and their device identities before physical telemetry is required.
+
+## Tasks
+
+- [x] Add truck CRUD and controlled status values.
+- [x] Store registration number and appropriate municipal scope.
+- [o] Add device registry/pairing only after deciding device identity and authorization rules.
+- [o] Ensure a device maps to an authorized truck server-side.
+- [x] Seed clearly fake development trucks.
+
+## Acceptance criteria
+
+- [x] Duplicate registration/device identity is rejected according to the chosen constraints.
+- [o] Users can manage only trucks in their scope.
+- [o] Device identity is not trusted merely because it appears in a payload.
+
+---
+
+# [o] PHASE 06 — Routes and collection stops
+
+## Goal
+
+Create routes, stop ordering, truck/driver assignments, and spatial records.
+
+## Tasks
+
+- [x] Define route and stop data contracts.
+- [x] Use appropriate PostGIS geometry/geography types and SRIDs.
+- [x] Add migrations and spatial indexes for actual query patterns.
+- [ ] Implement route draft/publish behavior if confirmed by the user requirements.
+- [x] Add stop coordinates, sequence, and only the operational fields currently required.
+- [o] Validate route, truck, driver, stop, and municipal-scope assignments.
+
+## Acceptance criteria
+
+- [o] Routes and stops persist and reload correctly.
+- [o] Invalid coordinates and invalid parent/assignment relationships are rejected.
+- [ ] Out-of-scope route/stop modifications fail.
+- [ ] API contracts are documented.
+
+---
+
+# [o] PHASE 07 — Admin dashboard and route-planning map
+
+## Goal
+
+Provide the first useful map and operational web interface.
+
+## Tasks
+
+- [x] Build shared dashboard layout, navigation, role-aware menu, and reusable form/table patterns.
+- [x] Add React-Leaflet map.
+- [o] Display authorized trucks, routes, and stops from real APIs.
+- [ ] Support route drawing/editing and stop placement only using a library and interaction model verified in the repository.
+- [o] Save edits through backend APIs; do not treat client map state as persisted data.
+- [x] Show loading, error, empty, and stale-data states.
+- [x] Attribute and comply with the chosen map tile provider's policy. Do not assume public OpenStreetMap tiles are unlimited production infrastructure.
+
+## Acceptance criteria
+
+- [o] Map shows only authorized records.
+- [ ] Route/stop edits survive refresh.
+- [o] Backend validates the saved geometry and assignments.
+- [x] Existing CRUD screens remain functional.
+
+---
+
+# [o] PHASE 08 — Telemetry simulator and normalized data contract
+
+## Goal
+
+Exercise the end-to-end telemetry path before hardware arrives.
+
+## Tasks
+
+- [x] Finalize and document a versioned telemetry payload.
+- [x] Implement a simulator for two or three fake trucks.
+- [ ] Support deterministic route replay, pauses, missing updates, delayed/duplicate messages, and a test device-offline condition.
+- [o] Send data through the same ingestion interface planned for MQTT devices.
+- [o] Validate coordinates, timestamp, device identity, sequence/duplicate behavior, and payload size.
+- [x] Persist latest location separately from history.
+
+## Acceptance criteria
+
+- [x] Simulator can run without physical hardware.
+- [o] Invalid telemetry is rejected and logged safely.
+- [x] Latest truck state updates correctly.
+- [ ] Duplicate and out-of-order messages have defined behavior.
+- [x] Dashboard can show moving and stale trucks from simulated data.
+
+---
+
+# [o] PHASE 09 — Realtime updates with Socket.io
+
+## Goal
+
+Push authorized truck and event updates to connected clients.
+
+## Tasks
+
+- [x] Authenticate Socket.io connections.
+- [x] Derive room membership from server-side user scope; never accept arbitrary room names from clients as authorization.
+- [x] Emit normalized location/event payloads only to eligible rooms/clients.
+- [x] Handle reconnect and stale state by refetching authoritative data.
+- [o] Add tests proving cross-city/society clients cannot subscribe to restricted information.
+
+## Acceptance criteria
+
+- [x] Authorized clients receive updates.
+- [x] Unauthorized room joins are rejected.
+- [x] Disconnect/reconnect does not leak or duplicate access.
+- [x] Realtime messages contain only fields required by the client.
+
+---
+
+# [ ] PHASE 10 — Geofencing, approach events, and alerts
+
+## Goal
+
+Turn location data into useful operational events.
+
+## Tasks
+
+- [ ] Implement spatial queries with PostGIS.
+- [ ] Support configurable approach radius (initial target: 500 m) where authorized.
+- [ ] Define entry/exit and event state transitions.
+- [ ] Add event deduplication and notification cooldown rules.
+- [ ] Add stale-truck, missed-stop, route-deviation, dwell-time, and power-loss events only when their triggering data and business rules are specified.
+- [ ] Record event timestamps, source, relevant entity IDs, and acknowledgement status as appropriate.
+- [ ] Ensure proximity is not automatically treated as proof of collection completion.
+
+## Acceptance criteria
+
+- [ ] Repeated GPS updates do not create repeated identical alerts.
+- [ ] Events are sent only to authorized roles/societies.
+- [ ] Boundary and radius behavior is tested.
+- [ ] Missing/stale telemetry is distinguished from a known stationary truck.
+
+---
+
+# [x] PHASE 11 — Physical MQTT and ESP32 integration
+
+Start only after the simulator-to-dashboard path is reliable.
+
+## Tasks
+
+- [x] Finalize broker host, TLS settings, topic format, ACLs, and device credential provisioning.
+- [x] Implement Node.js MQTT subscription and reconnect/error handling.
+- [x] Validate each device's topic and map device ID to an assigned truck server-side.
+- [x] Normalize MQTT messages to the same schema used by the simulator.
+- [x] Implement firmware reading GPS and any approved sensor inputs.
+- [x] Define power-cut behavior and test safe voltage sensing; never connect vehicle voltage directly to ESP32 GPIO.
+- [x] Document offline buffering, sequence numbers, time source, retry behavior, and credential rotation.
+
+## Acceptance criteria
+
+- [x] Valid device messages enter the same processing pipeline as simulator messages.
+- [x] Unknown devices and unauthorized topics are rejected.
+- [x] Broker credentials are not committed.
+- [x] Device/network interruption produces a visible stale/offline status rather than fabricated location.
+
+---
+
+# [ ] PHASE 12 — Push notifications
+
+## Goal
+
+Send relevant mobile alerts through Firebase Cloud Messaging after the event and recipient authorization logic is stable.
+
+## Tasks
+
+- [ ] Define device-token registration and revocation.
+- [ ] Store notification preferences and eligible society/user relationships as required.
+- [ ] Send FCM messages server-side only.
+- [ ] Handle invalid tokens, retry policy, and notification deduplication.
+- [ ] Avoid putting sensitive location details in push payloads unless explicitly required and authorized.
+
+## Acceptance criteria
+
+- [ ] Only eligible recipients are targeted.
+- [ ] FCM server credentials remain private.
+- [ ] Failures are logged and do not break telemetry ingestion.
+
+---
+
+# [ ] PHASE 13 — Mobile applications
+
+## Goal
+
+Build citizen and driver experiences after API and authorization contracts stabilize.
+
+## Citizen app tasks
+
+- [ ] Expo foundation and authentication.
+- [ ] Authorized society onboarding/verification.
+- [ ] Relevant truck approach/status view.
+- [ ] Push notifications and preferences.
+- [ ] Restricted map/radar view; no unrestricted city-wide fleet feed.
+
+## Driver app tasks
+
+- [ ] Assigned route/truck view.
+- [ ] Stop checklist and current/next stop.
+- [ ] Navigation integration only after requirements and map-provider implications are reviewed.
+- [ ] Dwell-time workflow and connectivity states.
+
+## Acceptance criteria
+
+- [ ] Mobile apps reuse backend business logic and APIs.
+- [ ] Users cannot access other societies/routes by modifying client state.
+- [ ] Offline and permission states are explicit.
+
+---
+
+# [o] PHASE 14 — Reports, audit, and operational accountability
+
+## Goal
+
+Provide traceable operations and useful reports.
+
+## Tasks
+
+- [x] Audit sensitive user, role, scope, route, truck, and alert actions.
+- [ ] Build authorized CSV exports and basic operational reports.
+- [ ] Record alert acknowledgement and relevant history.
+- [ ] Define retention and access rules for telemetry.
+- [o] Add pagination and limits to large result sets.
+
+## Acceptance criteria
+
+- [ ] Reports respect the caller's scope.
+- [ ] Exports cannot be used to bypass authorization.
+- [o] Audit records are not editable by ordinary users.
+- [ ] Telemetry retention is documented and tested.
+
+---
+
+# [o] PHASE 15 — Public website & landing presentation
+
+## Goal
+
+Create the public GeoSweep product and pilot-request presentation directly within `geosweep-web` (served on the public root `/` alongside the protected `/dashboard` operational shell), keeping all web assets unified in `geosweep-web`.
+
+## Pages/sections
+
+- [x] Product overview and problem statement.
+- [x] How the system works.
+- [x] Feature overview.
+- [ ] Security/privacy explanation that matches implemented controls.
+- [ ] Pilot-request/contact form.
+- [o] Accessibility, metadata, and basic SEO.
+
+## Rules
+
+- Do not display real citizen data, private locations, credentials, or internal dashboards.
+- Do not claim unimplemented features are live; label roadmap items honestly.
+- Keep marketing content consistent with the actual product.
+
+## Acceptance criteria
+
+- [x] Responsive page builds and deploys.
+- [ ] Form validates input and has success/error states.
+- [x] No secret keys are included in client code.
+
+---
+
+# [ ] PHASE 16 — Production hardening and deployment
+
+## Goal
+
+Prepare the tested system for a controlled pilot.
+
+## Tasks
+
+- [ ] Configure environment-specific settings and restrictive CORS.
+- [ ] Add structured logging, health checks, and useful operational metrics.
+- [ ] Review rate limiting, request validation, token expiry, and dependency vulnerabilities.
+- [ ] Review database backups, migrations, indexes, connection limits, and retention.
+- [ ] Test failure/recovery for backend, database, broker, realtime, and push services.
+- [ ] Review secrets rotation and deployment access.
+- [ ] Verify provider free-tier restrictions and estimated resource use.
+
+## Acceptance criteria
+
+- [ ] Deployment uses environment variables and no committed secrets.
+- [ ] Recovery and backup strategy is documented.
+- [ ] Authorization regression tests pass.
+- [ ] Free-tier quotas and production limitations are understood.
+
+---
+
+# [ ] PHASE 17 — Controlled real-world pilot
+
+## Goal
+
+Validate a small deployment before scaling.
+
+## Pilot outline
+
+- [ ] Select one ward and a small number of trucks, with municipal authorization.
+- [ ] Test simulated and physical telemetry paths.
+- [ ] Verify route/stop configuration and location accuracy.
+- [ ] Measure message delivery, stale-location detection, alert accuracy, and duplicate rates.
+- [ ] Train assigned staff and collect feedback.
+- [ ] Document issues and remediation before expansion.
+
+Do not claim a pilot is complete until real measurements and stakeholder acceptance exist.
+
+---
+
+# C. API and database rules
+
+## API rules
+
+- Use a consistent `/api/...` prefix.
+- Inspect existing routes before creating new ones.
+- Validate request parameters, body, and query strings with a consistent schema-validation approach.
+- Use DTOs/request schemas; do not return unrestricted database rows by default.
+- Centralize error handling and return safe messages without stack traces or secrets.
+- Paginate potentially large collections.
+- Enforce authorization at service/data-query boundaries.
+- Document API changes.
+
+## Database rules
+
+- Use migrations under `supabase/migrations/` or the repository's established migration location.
+- Never casually edit a migration already applied to a shared database; create a new migration.
+- Use foreign keys, unique constraints, check constraints, and indexes where appropriate.
+- Use PostGIS spatial types and spatial indexes for geographic queries.
+- Avoid indefinitely storing high-frequency telemetry without a retention plan.
+- Keep latest-position data separate from history when it improves access patterns.
+- Keep seed data fake and reproducible.
+
+## Realtime rules
+
+- Authenticate the connection.
+- Determine permissions and rooms on the server.
+- Validate subscription requests.
+- Send the minimum data necessary.
+- Re-check scope when assignments or permissions change; do not rely forever on stale room membership.
+
+## MQTT rules
+
+- Use TLS and unique credentials per device where supported.
+- Configure broker ACLs for least privilege.
+- Validate payloads and device-to-truck assignment.
+- Handle reconnect, duplicates, delayed messages, malformed data, and unknown devices.
+- Never treat topic text alone as proof of identity.
+
+---
+
+# D. Free-tier policy
+
+GeoSweep should use free-tier services during development wherever feasible. Before choosing or changing a provider:
+
+1. Check current official free-tier limits and usage terms.
+2. Identify sleeping/pausing behavior, storage, egress, connection, message, and build limits.
+3. Explain limitations before depending on the service for a pilot.
+4. Ask before introducing paid infrastructure.
+5. Keep domain logic portable so providers can be upgraded later.
+
+Do not guarantee that free tiers are sufficient for production. GPS updates every few seconds can create substantial write volume; establish sampling and retention before scale testing.
+
+---
+
+# E. Phase completion checklist
+
+A phase is complete only when all applicable items are true:
+
+- [ ] Acceptance criteria are met.
+- [ ] Architecture follows this document.
+- [ ] Database migration exists for schema changes.
+- [ ] Input validation exists.
+- [ ] Server-side authorization exists for protected operations.
+- [ ] API contracts and docs are updated.
+- [ ] Frontend uses real APIs unless mocks are explicitly required.
+- [ ] Loading, empty, error, and success states are handled where relevant.
+- [ ] Unit/integration tests are added where useful.
+- [ ] Relevant build/type-check/test commands were run and reported honestly.
+- [ ] Existing features still work.
+- [ ] No secrets or private data were committed.
+- [ ] README/PHASES/docs are updated if decisions changed.
+
+## Immediate next step
+
+Start with **Phase 00**, inspect the actual repository, and produce a short plan before making edits. The first major product milestone is Super Admin city onboarding + City Admin scope enforcement. Hardware, live MQTT, mobile apps, and production push notifications come later.
+
 ---
 
 # A. Universal rules for Antigravity and all coding agents
@@ -163,32 +737,35 @@ Driver → only assigned truck/route/stop workflow
 
 This is a permission and operational relationship, not necessarily a single parent-child table. Model actual user scopes and assignments explicitly. Do not assume every role has exactly one scope unless requirements establish that.
 
-## Target repository shape
+## Target polyrepo architecture
 
-```text
-GeoSweep/
-├── README.md
-├── PHASES.md
-├── .env.example
-├── backend/
-├── dashboard/
-├── public-website/
-├── mobile/          # later
-├── firmware/        # later
-├── simulator/
-├── supabase/
-│   ├── migrations/
-│   └── seed.sql
-└── docs/
-```
+The GeoSweep system is organized into four dedicated repositories under the `GeoSweep` GitHub organization:
 
-Do not create all future folders as empty placeholders. Add them when their phase begins. If the repository currently uses `admin-web/` rather than `dashboard/`, do not create a duplicate; either keep the existing agreed name or rename deliberately with all references updated.
+1. **`geosweep-backend`** (`https://github.com/GeoSweep/geosweep-backend.git`)
+   - Node.js, Express, TypeScript REST API, and Socket.io engine.
+   - Database migrations (Supabase PostgreSQL + PostGIS) are stored under `supabase/migrations/` in this repository.
+   - Telemetry validation, normalization, geofencing event engine, RBAC, and geographic-scope authorization.
+
+2. **`geosweep-web`** (`https://github.com/GeoSweep/geosweep-web.git`)
+   - React, Vite, TypeScript, Tailwind CSS municipal administration dashboard and public product showcase.
+   - Fleet monitoring, interactive Leaflet route planning, stop verification, and user onboarding.
+
+3. **`geosweep-mobile`** (`https://github.com/GeoSweep/geosweep-mobile.git`)
+   - React Native, Expo, TypeScript mobile applications for citizens and drivers.
+   - Approach notifications, society verification, driver stop checklist, and offline queueing.
+
+4. **`geosweep-firmware`** (`https://github.com/GeoSweep/geosweep-firmware.git`)
+   - ESP32 C++ firmware (PlatformIO / Arduino).
+   - NEO-6M GPS readings, cellular/WiFi telemetry transmission, and secure HiveMQ Cloud MQTT publishing.
+
+Each repository is completely standalone with its own `package.json` (or `platformio.ini`), `README.md`, `PHASES.md`, `.gitignore`, and `.env.example`.
 
 ## Domain-oriented backend organization
 
 ```text
-backend/src/
+geosweep-backend/src/
 ├── app.ts
+├── server.ts
 ├── config/
 ├── middleware/
 ├── modules/
@@ -205,582 +782,10 @@ backend/src/
 │   ├── telemetry/
 │   ├── alerts/
 │   └── audit/
-├── mqtt/            # later
-├── realtime/
+├── mqtt/            # Phase 11
+├── realtime/        # Phase 09
 └── utils/
 ```
 
 Within a module, separate routes/controller handlers, validation schemas, service/business logic, and repository/data access when useful. Avoid both giant monolithic files and needless layers for trivial code.
 
----
-
-# PHASE 00 — Repository and developer foundation
-
-## Goal
-
-Create a clean, reproducible monorepo and verify that the local development loop works.
-
-## Tasks
-
-- Initialize Git with `main` and `develop` branches.
-- Create or verify `backend/` and the React dashboard directory.
-- Add `.gitignore`, `.env.example`, root documentation, and package scripts.
-- Configure TypeScript strict mode, formatting/linting appropriate to the selected tools, and consistent naming.
-- Add a backend health endpoint, for example `GET /api/health`.
-- Add a minimal frontend shell that calls the health endpoint only if the API is running; display loading/error states.
-- Document local setup commands and required environment variables.
-- Create `docs/decisions/` for decisions that affect architecture.
-
-## Acceptance criteria
-
-- Backend starts locally.
-- Frontend starts and builds.
-- TypeScript checks pass.
-- Health endpoint returns a documented response.
-- No real secrets are tracked by Git.
-- A new developer can follow README setup steps without guessing.
-
-Do not implement business modules or MQTT in this phase.
-
----
-
-# PHASE 01 — Supabase database and schema foundation
-
-## Goal
-
-Set up PostgreSQL/PostGIS, migrations, minimal seed data, and a documented relational model.
-
-## Tasks
-
-- Create/connect a Supabase project or document local development configuration.
-- Enable PostGIS through a migration or documented database setup step.
-- Establish consistent primary-key, timestamp, naming, and foreign-key conventions.
-- Create only the initial tables required for authentication/profile and municipal hierarchy.
-- Proposed initial domains: profiles, cities, zones, wards, societies, roles/permissions or role assignments, and user scopes. Finalize table shape based on the auth and RBAC design before creating migrations.
-- Add appropriate unique constraints and indexes.
-- Add development seed data without real personal information.
-- Document how migrations are applied and how a clean database is initialized.
-
-## Rules
-
-- Do not use an ORM or schema generator as a substitute for reviewed migrations.
-- Never edit an already-applied migration to change deployed schema; add a new migration.
-- Do not store secrets in `seed.sql`.
-- Avoid creating telemetry tables before the telemetry model and retention policy are defined.
-
-## Acceptance criteria
-
-- A clean database can be initialized from migrations.
-- Foreign keys and uniqueness rules work.
-- PostGIS is enabled.
-- The schema is documented.
-- Seed data is deterministic and clearly development-only.
-
----
-
-# PHASE 02 — Authentication, profiles, RBAC, and geographic scope
-
-## Goal
-
-Implement phone OTP login and enforce authorization on the backend.
-
-## Auth contract
-
-- Use Supabase Auth phone OTP if the chosen project configuration supports it.
-- Verify tokens server-side using a supported verification mechanism.
-- Resolve the GeoSweep profile, active status, role, permissions, and scope from trusted records.
-- Users cannot choose their role at login.
-- If OTP provider credentials or phone delivery are not configured, document the blocker and use a clearly labelled development-only mock flow; never claim real SMS works.
-
-## Roles
-
-- `PLATFORM_SUPER_ADMIN`
-- `CITY_ADMIN`
-- `ZONAL_OFFICER`
-- `SANITARY_INSPECTOR`
-- `SOCIETY_SECRETARY`
-- `DRIVER`
-- `CITIZEN`
-
-## Tasks
-
-- Implement authentication middleware.
-- Implement a centralized permission/scope authorization helper.
-- Implement `GET /api/me` or the equivalent current-profile endpoint.
-- Protect API routes by permission and record scope.
-- Define how roles and scopes are assigned and audited.
-- Add negative tests for invalid/expired token, inactive user, missing permission, and out-of-scope access.
-- Decide and document token/session handling; do not invent a custom token format.
-
-## Acceptance criteria
-
-- Invalid or expired credentials are rejected.
-- User role is never accepted from a login form as authoritative.
-- Backend resolves roles and scopes from trusted data.
-- Out-of-scope API requests are rejected even when manually constructed.
-- Service-role and other server secrets are never exposed to clients.
-
----
-
-# PHASE 03 — Super Admin and municipal onboarding
-
-## Goal
-
-Deliver the first complete administrative slice.
-
-## Screens
-
-- Login/OTP
-- Dashboard shell
-- Cities
-- Users
-- Roles/assignments as required by the approved data model
-
-## APIs
-
-Design endpoint names after inspecting existing routes. Expected capabilities include:
-
-- list/create city
-- list/create/update/deactivate user/profile
-- assign role and geographic scope
-- retrieve current user's profile and permitted navigation data
-
-Do not create duplicate endpoints if equivalent routes already exist.
-
-## First end-to-end flow
-
-```text
-Platform Super Admin signs in
-  ↓
-Creates a city / ULB
-  ↓
-Creates a City Admin profile
-  ↓
-Assigns the City Admin to that city
-  ↓
-City Admin signs in
-  ↓
-City Admin can access only that city's data
-```
-
-## Acceptance criteria
-
-- Data comes from the database, not permanent frontend mock arrays.
-- Form loading, validation, success, empty, and error states work.
-- A City Admin cannot access another city by changing a URL or API identifier.
-- Sensitive user/role/scope changes are audit logged where the audit module is available.
-
----
-
-# PHASE 04 — Zones, wards, societies, and scope enforcement
-
-## Goal
-
-Build the municipal hierarchy and constrain data access at each level.
-
-## Tasks
-
-- CRUD for zones, wards, and societies as authorized by role.
-- Validate parent-child relationships (a ward belongs to a valid zone/city according to the approved schema).
-- Implement scope-filtered queries in backend services.
-- Add tests for cross-city, cross-zone, cross-ward, and cross-society access.
-- Add admin UI for the permitted operations only.
-
-## Acceptance criteria
-
-- Parent-child relationships are validated by the backend and database.
-- A user cannot reassign a record outside their authority.
-- Scope is not enforced only by frontend filtering.
-
----
-
-# PHASE 05 — Fleet and device registry
-
-## Goal
-
-Manage trucks and their device identities before physical telemetry is required.
-
-## Tasks
-
-- Add truck CRUD and controlled status values.
-- Store registration number and appropriate municipal scope.
-- Add device registry/pairing only after deciding device identity and authorization rules.
-- Ensure a device maps to an authorized truck server-side.
-- Seed clearly fake development trucks.
-
-## Acceptance criteria
-
-- Duplicate registration/device identity is rejected according to the chosen constraints.
-- Users can manage only trucks in their scope.
-- Device identity is not trusted merely because it appears in a payload.
-
----
-
-# PHASE 06 — Routes and collection stops
-
-## Goal
-
-Create routes, stop ordering, truck/driver assignments, and spatial records.
-
-## Tasks
-
-- Define route and stop data contracts.
-- Use appropriate PostGIS geometry/geography types and SRIDs.
-- Add migrations and spatial indexes for actual query patterns.
-- Implement route draft/publish behavior if confirmed by the user requirements.
-- Add stop coordinates, sequence, and only the operational fields currently required.
-- Validate route, truck, driver, stop, and municipal-scope assignments.
-
-## Acceptance criteria
-
-- Routes and stops persist and reload correctly.
-- Invalid coordinates and invalid parent/assignment relationships are rejected.
-- Out-of-scope route/stop modifications fail.
-- API contracts are documented.
-
----
-
-# PHASE 07 — Admin dashboard and route-planning map
-
-## Goal
-
-Provide the first useful map and operational web interface.
-
-## Tasks
-
-- Build shared dashboard layout, navigation, role-aware menu, and reusable form/table patterns.
-- Add React-Leaflet map.
-- Display authorized trucks, routes, and stops from real APIs.
-- Support route drawing/editing and stop placement only using a library and interaction model verified in the repository.
-- Save edits through backend APIs; do not treat client map state as persisted data.
-- Show loading, error, empty, and stale-data states.
-- Attribute and comply with the chosen map tile provider's policy. Do not assume public OpenStreetMap tiles are unlimited production infrastructure.
-
-## Acceptance criteria
-
-- Map shows only authorized records.
-- Route/stop edits survive refresh.
-- Backend validates the saved geometry and assignments.
-- Existing CRUD screens remain functional.
-
----
-
-# PHASE 08 — Telemetry simulator and normalized data contract
-
-## Goal
-
-Exercise the end-to-end telemetry path before hardware arrives.
-
-## Tasks
-
-- Finalize and document a versioned telemetry payload.
-- Implement a simulator for two or three fake trucks.
-- Support deterministic route replay, pauses, missing updates, delayed/duplicate messages, and a test device-offline condition.
-- Send data through the same ingestion interface planned for MQTT devices.
-- Validate coordinates, timestamp, device identity, sequence/duplicate behavior, and payload size.
-- Persist latest location separately from history.
-
-## Acceptance criteria
-
-- Simulator can run without physical hardware.
-- Invalid telemetry is rejected and logged safely.
-- Latest truck state updates correctly.
-- Duplicate and out-of-order messages have defined behavior.
-- Dashboard can show moving and stale trucks from simulated data.
-
----
-
-# PHASE 09 — Realtime updates with Socket.io
-
-## Goal
-
-Push authorized truck and event updates to connected clients.
-
-## Tasks
-
-- Authenticate Socket.io connections.
-- Derive room membership from server-side user scope; never accept arbitrary room names from clients as authorization.
-- Emit normalized location/event payloads only to eligible rooms/clients.
-- Handle reconnect and stale state by refetching authoritative data.
-- Add tests proving cross-city/society clients cannot subscribe to restricted information.
-
-## Acceptance criteria
-
-- Authorized clients receive updates.
-- Unauthorized room joins are rejected.
-- Disconnect/reconnect does not leak or duplicate access.
-- Realtime messages contain only fields required by the client.
-
----
-
-# PHASE 10 — Geofencing, approach events, and alerts
-
-## Goal
-
-Turn location data into useful operational events.
-
-## Tasks
-
-- Implement spatial queries with PostGIS.
-- Support configurable approach radius (initial target: 500 m) where authorized.
-- Define entry/exit and event state transitions.
-- Add event deduplication and notification cooldown rules.
-- Add stale-truck, missed-stop, route-deviation, dwell-time, and power-loss events only when their triggering data and business rules are specified.
-- Record event timestamps, source, relevant entity IDs, and acknowledgement status as appropriate.
-- Ensure proximity is not automatically treated as proof of collection completion.
-
-## Acceptance criteria
-
-- Repeated GPS updates do not create repeated identical alerts.
-- Events are sent only to authorized roles/societies.
-- Boundary and radius behavior is tested.
-- Missing/stale telemetry is distinguished from a known stationary truck.
-
----
-
-# PHASE 11 — Physical MQTT and ESP32 integration
-
-Start only after the simulator-to-dashboard path is reliable.
-
-## Tasks
-
-- Finalize broker host, TLS settings, topic format, ACLs, and device credential provisioning.
-- Implement Node.js MQTT subscription and reconnect/error handling.
-- Validate each device's topic and map device ID to an assigned truck server-side.
-- Normalize MQTT messages to the same schema used by the simulator.
-- Implement firmware reading GPS and any approved sensor inputs.
-- Define power-cut behavior and test safe voltage sensing; never connect vehicle voltage directly to ESP32 GPIO.
-- Document offline buffering, sequence numbers, time source, retry behavior, and credential rotation.
-
-## Acceptance criteria
-
-- Valid device messages enter the same processing pipeline as simulator messages.
-- Unknown devices and unauthorized topics are rejected.
-- Broker credentials are not committed.
-- Device/network interruption produces a visible stale/offline status rather than fabricated location.
-
----
-
-# PHASE 12 — Push notifications
-
-## Goal
-
-Send relevant mobile alerts through Firebase Cloud Messaging after the event and recipient authorization logic is stable.
-
-## Tasks
-
-- Define device-token registration and revocation.
-- Store notification preferences and eligible society/user relationships as required.
-- Send FCM messages server-side only.
-- Handle invalid tokens, retry policy, and notification deduplication.
-- Avoid putting sensitive location details in push payloads unless explicitly required and authorized.
-
-## Acceptance criteria
-
-- Only eligible recipients are targeted.
-- FCM server credentials remain private.
-- Failures are logged and do not break telemetry ingestion.
-
----
-
-# PHASE 13 — Mobile applications
-
-## Goal
-
-Build citizen and driver experiences after API and authorization contracts stabilize.
-
-## Citizen app tasks
-
-- Expo foundation and authentication.
-- Authorized society onboarding/verification.
-- Relevant truck approach/status view.
-- Push notifications and preferences.
-- Restricted map/radar view; no unrestricted city-wide fleet feed.
-
-## Driver app tasks
-
-- Assigned route/truck view.
-- Stop checklist and current/next stop.
-- Navigation integration only after requirements and map-provider implications are reviewed.
-- Dwell-time workflow and connectivity states.
-
-## Acceptance criteria
-
-- Mobile apps reuse backend business logic and APIs.
-- Users cannot access other societies/routes by modifying client state.
-- Offline and permission states are explicit.
-
----
-
-# PHASE 14 — Reports, audit, and operational accountability
-
-## Goal
-
-Provide traceable operations and useful reports.
-
-## Tasks
-
-- Audit sensitive user, role, scope, route, truck, and alert actions.
-- Build authorized CSV exports and basic operational reports.
-- Record alert acknowledgement and relevant history.
-- Define retention and access rules for telemetry.
-- Add pagination and limits to large result sets.
-
-## Acceptance criteria
-
-- Reports respect the caller's scope.
-- Exports cannot be used to bypass authorization.
-- Audit records are not editable by ordinary users.
-- Telemetry retention is documented and tested.
-
----
-
-# PHASE 15 — Public website
-
-## Goal
-
-Create the public GeoSweep product website separately from the protected municipal dashboard.
-
-## Pages/sections
-
-- Product overview and problem statement.
-- How the system works.
-- Feature overview.
-- Security/privacy explanation that matches implemented controls.
-- Pilot-request/contact form.
-- Accessibility, metadata, and basic SEO.
-
-## Rules
-
-- Do not display real citizen data, private locations, credentials, or internal dashboards.
-- Do not claim unimplemented features are live; label roadmap items honestly.
-- Keep marketing content consistent with the actual product.
-
-## Acceptance criteria
-
-- Responsive page builds and deploys.
-- Form validates input and has success/error states.
-- No secret keys are included in client code.
-
----
-
-# PHASE 16 — Production hardening and deployment
-
-## Goal
-
-Prepare the tested system for a controlled pilot.
-
-## Tasks
-
-- Configure environment-specific settings and restrictive CORS.
-- Add structured logging, health checks, and useful operational metrics.
-- Review rate limiting, request validation, token expiry, and dependency vulnerabilities.
-- Review database backups, migrations, indexes, connection limits, and retention.
-- Test failure/recovery for backend, database, broker, realtime, and push services.
-- Review secrets rotation and deployment access.
-- Verify provider free-tier restrictions and estimated resource use.
-
-## Acceptance criteria
-
-- Deployment uses environment variables and no committed secrets.
-- Recovery and backup strategy is documented.
-- Authorization regression tests pass.
-- Free-tier quotas and production limitations are understood.
-
----
-
-# PHASE 17 — Controlled real-world pilot
-
-## Goal
-
-Validate a small deployment before scaling.
-
-## Pilot outline
-
-- Select one ward and a small number of trucks, with municipal authorization.
-- Test simulated and physical telemetry paths.
-- Verify route/stop configuration and location accuracy.
-- Measure message delivery, stale-location detection, alert accuracy, and duplicate rates.
-- Train assigned staff and collect feedback.
-- Document issues and remediation before expansion.
-
-Do not claim a pilot is complete until real measurements and stakeholder acceptance exist.
-
----
-
-# C. API and database rules
-
-## API rules
-
-- Use a consistent `/api/...` prefix.
-- Inspect existing routes before creating new ones.
-- Validate request parameters, body, and query strings with a consistent schema-validation approach.
-- Use DTOs/request schemas; do not return unrestricted database rows by default.
-- Centralize error handling and return safe messages without stack traces or secrets.
-- Paginate potentially large collections.
-- Enforce authorization at service/data-query boundaries.
-- Document API changes.
-
-## Database rules
-
-- Use migrations under `supabase/migrations/` or the repository's established migration location.
-- Never casually edit a migration already applied to a shared database; create a new migration.
-- Use foreign keys, unique constraints, check constraints, and indexes where appropriate.
-- Use PostGIS spatial types and spatial indexes for geographic queries.
-- Avoid indefinitely storing high-frequency telemetry without a retention plan.
-- Keep latest-position data separate from history when it improves access patterns.
-- Keep seed data fake and reproducible.
-
-## Realtime rules
-
-- Authenticate the connection.
-- Determine permissions and rooms on the server.
-- Validate subscription requests.
-- Send the minimum data necessary.
-- Re-check scope when assignments or permissions change; do not rely forever on stale room membership.
-
-## MQTT rules
-
-- Use TLS and unique credentials per device where supported.
-- Configure broker ACLs for least privilege.
-- Validate payloads and device-to-truck assignment.
-- Handle reconnect, duplicates, delayed messages, malformed data, and unknown devices.
-- Never treat topic text alone as proof of identity.
-
----
-
-# D. Free-tier policy
-
-GeoSweep should use free-tier services during development wherever feasible. Before choosing or changing a provider:
-
-1. Check current official free-tier limits and usage terms.
-2. Identify sleeping/pausing behavior, storage, egress, connection, message, and build limits.
-3. Explain limitations before depending on the service for a pilot.
-4. Ask before introducing paid infrastructure.
-5. Keep domain logic portable so providers can be upgraded later.
-
-Do not guarantee that free tiers are sufficient for production. GPS updates every few seconds can create substantial write volume; establish sampling and retention before scale testing.
-
----
-
-# E. Phase completion checklist
-
-A phase is complete only when all applicable items are true:
-
-- [ ] Acceptance criteria are met.
-- [ ] Architecture follows this document.
-- [ ] Database migration exists for schema changes.
-- [ ] Input validation exists.
-- [ ] Server-side authorization exists for protected operations.
-- [ ] API contracts and docs are updated.
-- [ ] Frontend uses real APIs unless mocks are explicitly required.
-- [ ] Loading, empty, error, and success states are handled where relevant.
-- [ ] Unit/integration tests are added where useful.
-- [ ] Relevant build/type-check/test commands were run and reported honestly.
-- [ ] Existing features still work.
-- [ ] No secrets or private data were committed.
-- [ ] README/PHASES/docs are updated if decisions changed.
-
-## Immediate next step
-
-Start with **Phase 00**, inspect the actual repository, and produce a short plan before making edits. The first major product milestone is Super Admin city onboarding + City Admin scope enforcement. Hardware, live MQTT, mobile apps, and production push notifications come later.
