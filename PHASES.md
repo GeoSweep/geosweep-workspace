@@ -220,7 +220,7 @@ Create routes, stop ordering, truck/driver assignments, and spatial records.
 - [x] Define route and stop data contracts.
 - [x] Use appropriate PostGIS geometry/geography types and SRIDs.
 - [x] Add migrations and spatial indexes for actual query patterns.
-- [ ] Implement route draft/publish behavior if confirmed by the user requirements.
+- [x] Implement route draft/publish behavior with 500m geofence buffer and stop ordering.
 - [x] Add stop coordinates, sequence, and only the operational fields currently required.
 - [o] Validate route, truck, driver, stop, and municipal-scope assignments.
 
@@ -244,7 +244,7 @@ Provide the first useful map and operational web interface.
 - [x] Build shared dashboard layout, navigation, role-aware menu, and reusable form/table patterns.
 - [x] Add React-Leaflet map.
 - [o] Display authorized trucks, routes, and stops from real APIs.
-- [ ] Support route drawing/editing and stop placement only using a library and interaction model verified in the repository.
+- [x] Support route drawing/editing and stop placement via Leaflet map click and interactive stop modal.
 - [o] Save edits through backend APIs; do not treat client map state as persisted data.
 - [x] Show loading, error, empty, and stale-data states.
 - [x] Attribute and comply with the chosen map tile provider's policy. Do not assume public OpenStreetMap tiles are unlimited production infrastructure.
@@ -414,8 +414,8 @@ Provide traceable operations and useful reports.
 ## Tasks
 
 - [x] Audit sensitive user, role, scope, route, truck, and alert actions.
-- [ ] Build authorized CSV exports and basic operational reports.
-- [ ] Record alert acknowledgement and relevant history.
+- [x] Build authorized CSV exports (fleet summary & incident audit logs) and basic operational reports.
+- [x] Record alert acknowledgement and relevant history via Notification Bell and drawer.
 - [ ] Define retention and access rules for telemetry.
 - [o] Add pagination and limits to large result sets.
 
@@ -439,8 +439,8 @@ Create the public GeoSweep product and pilot-request presentation directly withi
 - [x] Product overview and problem statement.
 - [x] How the system works.
 - [x] Feature overview.
-- [ ] Security/privacy explanation that matches implemented controls.
-- [ ] Pilot-request/contact form.
+- [x] Security/privacy explanation that matches implemented controls.
+- [x] Pilot-request/contact form with input validation and local reference logging.
 - [o] Accessibility, metadata, and basic SEO.
 
 ## Rules
@@ -452,7 +452,7 @@ Create the public GeoSweep product and pilot-request presentation directly withi
 ## Acceptance criteria
 
 - [x] Responsive page builds and deploys.
-- [ ] Form validates input and has success/error states.
+- [x] Form validates input and has success/error states.
 - [x] No secret keys are included in client code.
 
 ---
