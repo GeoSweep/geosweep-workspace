@@ -428,7 +428,7 @@ Provide traceable operations and useful reports.
 
 ---
 
-# [o] PHASE 15 — Public website & landing presentation
+# [x] PHASE 15 — Public website & landing presentation
 
 ## Goal
 
@@ -441,7 +441,7 @@ Create the public GeoSweep product and pilot-request presentation directly withi
 - [x] Feature overview.
 - [x] Security/privacy explanation that matches implemented controls.
 - [x] Pilot-request/contact form with input validation and local reference logging.
-- [o] Accessibility, metadata, and basic SEO.
+- [x] Accessibility, metadata, and basic SEO.
 
 ## Rules
 
