@@ -11,12 +11,15 @@
     "dev": "concurrently -n \"BACKEND,WEB\" -c \"blue,green\" \"npm run dev:backend\" \"npm run dev:web\"",
     "dev:backend": "npm --prefix geosweep-backend run dev",
     "dev:web": "npm --prefix geosweep-web run dev",
+    "dev:mobile": "npm --prefix geosweep-mobile start",
+    "dev:all": "concurrently -n \"BACKEND,WEB,MOBILE\" -c \"blue,green,magenta\" \"npm run dev:backend\" \"npm run dev:web\" \"npm run dev:mobile\"",
     "build": "npm --prefix geosweep-backend run build && npm --prefix geosweep-web run build",
     "build:backend": "npm --prefix geosweep-backend run build",
     "build:web": "npm --prefix geosweep-web run build",
-    "typecheck": "npm --prefix geosweep-backend run typecheck && npm --prefix geosweep-web run typecheck",
+    "typecheck": "npm --prefix geosweep-backend run typecheck && npm --prefix geosweep-web run typecheck && npm --prefix geosweep-mobile run typecheck",
     "typecheck:backend": "npm --prefix geosweep-backend run typecheck",
     "typecheck:web": "npm --prefix geosweep-web run typecheck",
+    "typecheck:mobile": "npm --prefix geosweep-mobile run typecheck",
     "test": "npm --prefix geosweep-backend run test"
   },
   "devDependencies": {

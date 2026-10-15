@@ -147,3 +147,14 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# ==========================================
+# GeoSweep Internal Documentation & Phases
+# ==========================================
+docs/
+PHASES.md
+PHASES_*.md
+*PHASES*.md
+
+# Local IDE Configurations
+.vscode/
