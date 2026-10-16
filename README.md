@@ -80,6 +80,7 @@ Under the **Swachh Bharat Mission (Urban 2.0)** and **National Smart Cities Miss
   - **Fixed Society Anchor:** Saves citizen society address with animated geofence boundary identical to the municipal GIS map.
   - **1-Tap Grievance Logging:** Direct grievance submission to PCMC Smart City Command with automated photo and timestamp attachment.
 - **For Drivers:**
+  - **Live Route Navigation Map:** Interactive GIS map tracing sequential collection stops with real-time route path line following, active leg highlighting, and turn-by-turn HUD.
   - **Sequential Route Checklist:** Turn-by-turn collection sequence with real-time dwell timer countdown.
   - **Vehicle Health HUD:** Battery voltage, satellite count, and depot departure logging.
 
