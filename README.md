@@ -54,7 +54,8 @@ Under the **Swachh Bharat Mission (Urban 2.0)** and **National Smart Cities Miss
 - Physical tracking device deployed in municipal collection tippers.
 - **Microcontroller:** ESP32 dual-core Xtensa processor running non-blocking FreeRTOS telemetry tasks.
 - **Positioning:** NEO-6M high-sensitivity GNSS receiver parsing NMEA sentences (lat, lng, speed, heading, satellite fix).
-- **Dual-Link Connectivity:** Primary GSM/GPRS (SIM800L) with automatic fallback to municipal depot WiFi.
+- **Dual-Link Connectivity:** SIM800L or Wi-Fi on bench prototype, with industrial 4G Cat-1 cellular module for production vehicle rollout.
+- **Hardware Pricing:** Built at ₹800 (bench prototype) / ₹1,200 (production automotive node with internal LiPo sabotage backup).
 - **Driver Diagnostics:** On-chassis SSD1306 OLED HUD displaying live GPS coordinate lock, network signal, and MQTT broker handshake status.
 
 ### 2. ⚡ Secure Cloud Broker & Spatial Pipeline (`geosweep-backend`)
@@ -98,7 +99,7 @@ Under the **Swachh Bharat Mission (Urban 2.0)** and **National Smart Cities Miss
 flowchart TD
     subgraph IoT Vehicle Node [Municipal Tipper Truck]
         GPS[NEO-6M GPS Receiver] -->|NMEA Coordinates| ESP32[ESP32 Hardware Controller]
-        SIM[SIM800L Cellular / Depot WiFi] <--> ESP32
+        SIM[SIM800L / WiFi Bench · 4G Cat-1 Production] <--> ESP32
         ESP32 -->|Live Status HUD| Screen[SSD1306 OLED Diagnostic Screen]
     end
 
